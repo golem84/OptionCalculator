@@ -1,59 +1,116 @@
 ﻿
 
+using Statistics;
+
 namespace Options
 {
-    public enum ContractType { futures = -1, call = 0, put = 1 }
+    // перечисления
+    public enum OptionType { call = (sbyte)1, put = (sbyte)-1 }
     public enum DealType { buy = 1, sell = -1 }
 
-    // описание структуры для контрактов - опционов и фьючерсов
-    public struct Contract
+    // описание структуры для фьючерса 
+    public struct Futures : IGreeks
     {
-        //public string name;         // код базового актива
-        public ContractType Type;   // тип контракта
-        public double? Strike;      // страйк опциона
-        public DateTime ExpireDate; // дата экспирации
+        //public string Name;
+        public DateTime ExpireDate;
 
-        public Contract(/*string n,*/ ContractType c, DateTime d, double? s)
+        public Futures(DateTime d)
         {
-            if (c != ContractType.futures)
-            { //name = n;
-              Type = c; ExpireDate = d; Strike = s;
-            }
-            else
-            {
-                //name = n;
-                Type = c; ExpireDate = d; Strike = null;
-            }
+            ExpireDate = d;
         }
-                
+
+        public Greeks GetGreeks(Condition cond)
+        {
+            Greeks greeks = new Greeks();
+            // TODO: добавить греки для фьючерса
+            return greeks;
+        }
     }
 
-    // описание структуры для сделки с контрактами
-    public struct Deal: IGreeks
+    // описание структуры для опциона
+    public struct Option : IGreeks
     {
-        public Contract Contract;
+        //public string name;         // код базового актива
+        public OptionType Type;   // тип контракта
+        public double Strike;      // страйк опциона
+        public DateTime ExpireDate; // дата экспирации        
+
+        public Option(/*string n,*/ OptionType c, DateTime d, double s)
+        {
+            Type = c;
+            ExpireDate = d;
+            Strike = s;
+        }
+
+        public double GetDaysToExpire(DateTime d)
+        {
+            TimeSpan dd = this.ExpireDate-d;
+            if (DateTime.IsLeapYear(d.Year)) return dd.TotalHours / 366;
+            else return dd.TotalHours / 365;
+        }
+
+        public Greeks GetGreeks(Condition cond)
+        {
+            Greeks greeks = new Greeks();
+            // TODO: дописать метод GetGreeks для контракта
+            double t = GetDaysToExpire(cond.currentDate);
+            double h = (Math.Log(cond.priceBA / Strike) + 0.5 * cond.volatility * cond.volatility / t)
+                / (cond.volatility * Math.Sqrt(t));
+            double ert = Math.Exp(-cond.ratio * t);
+            double Ph = Stat.NormPlotn(h);      // статич распределение            
+            double Vh = Stat.NormVer(h);        // интеграл от статич распределения
+            double Sqt = Math.Sqrt(t);
+            double dteta = 0.5 * cond.priceBA * cond.volatility * Ph / Sqt;
+            double Vph = Stat.NormVer(h - cond.volatility * Sqt);
+            double Vmh = Stat.NormVer(cond.volatility * Sqt - h);
+
+            greeks.Gamma = ert * Ph / (cond.priceBA * cond.volatility * Sqt);
+            greeks.Vega = ert * cond.priceBA * Ph * Sqt;
+
+            switch (Type)
+            {
+                case OptionType.call:
+                    {
+                        greeks.TheorPrice = cond.priceBA * ert * Vh - Strike * ert * Vph;
+                        greeks.Delta = ert * Vh;
+                        greeks.Theta = ert * (cond.ratio * (-cond.priceBA * Vh + Strike * Vph) + dteta);
+                        greeks.Ro = -t * greeks.TheorPrice;
+                        break;
+                    }
+                case OptionType.put:
+                    {
+                        greeks.TheorPrice = -cond.priceBA * ert * (1 - Vh) + Strike * ert * Vmh;
+                        greeks.Delta = -ert * (1 - Vh);
+                        greeks.Theta = ert * (cond.ratio * (cond.priceBA * (1 - Vh) - Strike * Vmh) + dteta);
+                        greeks.Ro = -t * greeks.TheorPrice;
+                        break;
+                    }
+            }
+            return greeks;
+        }
+
+    }
+
+    // TODO: ввести в сделку учет фьючерсов???
+    // описание структуры для сделки с контрактами
+    public struct Deal //: IGreeks
+    {
+        public Option Option;
         public double Price;
         public DealType DealType;
         public int Number;
         public bool Acting;
 
-        public Deal(Contract c, double p, DealType d, int n, bool a)
+        public Deal(Option c, double p, DealType d, int n, bool a)
         {
-            Contract = c; Price = p; DealType = d; Number = n ; Acting = a; 
-        }
-
-        public Greeks GetGreeks(double volativity, double price)
-        {
-            Greeks greeks = new Greeks();
-            // дописать код для определения греков по сделке с контрактом
-            return greeks;
+            Option = c; Price = p; DealType = d; Number = n; Acting = a;
         }
     }
 
-    public class Position: IGreeks
-    { 
+    public struct Position : IGreeks
+    {
         private List<Deal> Deals { get; }
-        
+
         public Position()
         {
             Deals = new List<Deal>();
@@ -64,29 +121,23 @@ namespace Options
             Deals = new List<Deal>(deals);
         }
 
-        public void AddContract(Deal d)
+        public void AddDeal(Deal d)
         {
             Deals.Add(d);
         }
 
-        public void RemoveContract(Deal d)
+        public void RemoveDeal(Deal d)
         {
             Deals.Remove(d);
         }
 
-        public Greeks GetGreeks(double volativity, double price)
+        public Greeks GetGreeks(Condition cond)
         {
             Greeks greeks = new Greeks();
             // дописать код для определения греков текущей позиции по всем контрактам
             return greeks;
         }
     }
-        
-        
-        
-        
-    
-    
 
-    
+
 }

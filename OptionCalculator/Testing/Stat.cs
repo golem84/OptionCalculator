@@ -5,13 +5,13 @@ namespace Statistics
     public static class Stat
     {
         
-        public static double NormPlotn(double x)
+        public static double NormPlotn(double x)    // статич.распределение
         {
             //if (sigm <= 0) return -1;
             return 0.39894228 * Math.Exp(-0.5 * x * x);
         }       
 
-        public static double NormVer(double x)
+        public static double NormVer(double x)      // интеграл от статич.распределения
         {
             double sum = 0;
             double eps = (6-Math.Abs(x))*0.001;

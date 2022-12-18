@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿
 
 namespace Options
 {
@@ -10,16 +6,17 @@ namespace Options
     // структура для описания греков контракта
     public struct Greeks
     {
+        public double TheorPrice;
         public double Delta;
         public double Vega;
         public double Gamma;
         public double Theta;
-        //public double? ro;
+        public double Ro;
     }
 
     // метод для расчета греков контракта
     public interface IGreeks
     {
-        public Greeks GetGreeks(double volativity, double price);
+        public Greeks GetGreeks(Condition cond);
     }
 }
