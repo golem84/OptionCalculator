@@ -21,7 +21,8 @@ namespace Options
         {
             priceBA = p;
             if (v < 0) volatility = 0; else volatility = v;
-            if (d.Date<DateTime.Today) currentDate = DateTime.Now; else currentDate = d;
+            //if (d.Date<DateTime.Today) currentDate = DateTime.Now; else 
+                currentDate = d;
             if (r < 0) ratio = 0; else ratio = r;
         }
 

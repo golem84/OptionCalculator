@@ -12,6 +12,7 @@ namespace Options
         public double Gamma;
         public double Theta;
         public double Ro;
+        //public double DaysToExpire;
     }
 
     // метод для расчета греков контракта
